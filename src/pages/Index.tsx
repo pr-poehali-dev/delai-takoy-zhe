@@ -1,13 +1,178 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+
+const API_URL = 'https://functions.poehali.dev/fca85f6b-4530-4f3d-8164-e53f6939e689';
 
 export default function Index() {
-  const [balance, setBalance] = useState(10000);
+  const [balance, setBalance] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('games');
+  const [loading, setLoading] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawRecipient, setWithdrawRecipient] = useState('');
+  const [gameResult, setGameResult] = useState<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const fetchBalance = async () => {
+    try {
+      const res = await fetch(`${API_URL}?action=balance`);
+      const data = await res.json();
+      setBalance(data.balance);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchBalance();
+  }, []);
+
+  const handleDeposit = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      toast.error('Введите корректную сумму');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}?action=transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'deposit', amount: parseFloat(depositAmount) })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setBalance(data.balance);
+        setDepositAmount('');
+        setShowDeposit(false);
+        toast.success(`Баланс пополнен на ${depositAmount}₽`);
+      } else {
+        toast.error(data.error || 'Ошибка пополнения');
+      }
+    } catch (error) {
+      toast.error('Ошибка соединения');
+    }
+    setLoading(false);
+  };
+
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      toast.error('Введите корректную сумму');
+      return;
+    }
+    if (!withdrawRecipient) {
+      toast.error('Введите получателя');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}?action=transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'withdraw', 
+          amount: parseFloat(withdrawAmount),
+          recipient: withdrawRecipient
+        })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setBalance(data.balance);
+        setWithdrawAmount('');
+        setWithdrawRecipient('');
+        setShowWithdraw(false);
+        toast.success('Вывод выполнен успешно');
+      } else {
+        toast.error(data.error || 'Ошибка вывода');
+      }
+    } catch (error) {
+      toast.error('Ошибка соединения');
+    }
+    setLoading(false);
+  };
+
+  const playSlots = async (bet: number) => {
+    if (balance < bet) {
+      toast.error('Недостаточно средств');
+      return;
+    }
+    
+    setIsPlaying(true);
+    setGameResult(null);
+    
+    try {
+      const res = await fetch(`${API_URL}?action=play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game: 'slots', bet })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setBalance(data.balance);
+        setGameResult(data);
+        
+        if (data.win > 0) {
+          toast.success(`Выигрыш: ${data.win}₽! 🎉`);
+        } else {
+          toast.info('Попробуйте еще раз!');
+        }
+      } else {
+        toast.error(data.error || 'Ошибка игры');
+      }
+    } catch (error) {
+      toast.error('Ошибка соединения');
+    }
+    
+    setTimeout(() => setIsPlaying(false), 1000);
+  };
+
+  const playRoulette = async (choice: string, bet: number) => {
+    if (balance < bet) {
+      toast.error('Недостаточно средств');
+      return;
+    }
+    
+    setIsPlaying(true);
+    setGameResult(null);
+    
+    try {
+      const res = await fetch(`${API_URL}?action=play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game: 'roulette', bet, choice })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setBalance(data.balance);
+        setGameResult(data);
+        
+        if (data.win > 0) {
+          toast.success(`Выигрыш: ${data.win}₽! Выпало ${data.result.number} (${data.result.color === 'red' ? 'красное' : data.result.color === 'black' ? 'чёрное' : 'зеро'}) 🎉`);
+        } else {
+          toast.info(`Выпало ${data.result.number} (${data.result.color === 'red' ? 'красное' : data.result.color === 'black' ? 'чёрное' : 'зеро'}). Попробуйте еще!`);
+        }
+      } else {
+        toast.error(data.error || 'Ошибка игры');
+      }
+    } catch (error) {
+      toast.error('Ошибка соединения');
+    }
+    
+    setTimeout(() => setIsPlaying(false), 1000);
+  };
 
   const games = [
     { id: 1, name: 'Lucky Slots', icon: 'Cherry', minBet: 10, maxWin: 5000, hot: true },
@@ -134,7 +299,23 @@ export default function Index() {
           </div>
 
           {activeTab === 'games' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+            <>
+              {gameResult && gameResult.result && gameResult.result.reels && (
+                <div className="mb-6 p-6 bg-card border border-primary/30 rounded-lg text-center animate-fade-in">
+                  <div className="text-xl font-bold mb-4 text-foreground">Результат игры:</div>
+                  <div className="flex justify-center gap-4 text-6xl mb-4">
+                    {gameResult.result.reels.map((reel: string, i: number) => (
+                      <div key={i} className="bg-muted p-4 rounded-lg animate-pulse-glow">
+                        {reel}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-2xl font-bold text-primary">
+                    {gameResult.win > 0 ? `Выигрыш: ${gameResult.win}₽ 🎉` : 'Попробуйте еще раз!'}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
               {games.map((game) => (
                 <Card
                   key={game.id}
@@ -154,13 +335,18 @@ export default function Index() {
                       <p>Мин. ставка: <span className="text-primary font-semibold">{game.minBet}₽</span></p>
                       <p>Макс. выигрыш: <span className="text-primary font-semibold">{game.maxWin.toLocaleString()}₽</span></p>
                     </div>
-                    <Button className="w-full gold-gradient text-background font-semibold hover:opacity-90">
-                      Играть сейчас
+                    <Button 
+                      onClick={() => playSlots(game.minBet)}
+                      disabled={isPlaying || loading}
+                      className="w-full gold-gradient text-background font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                      {isPlaying ? 'Играем...' : `Играть (${game.minBet}₽)`}
                     </Button>
                   </div>
                 </Card>
               ))}
-            </div>
+              </div>
+            </>
           )}
 
           {activeTab === 'roulette' && (
@@ -175,19 +361,39 @@ export default function Index() {
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-4 max-w-md mx-auto mb-6">
-                <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
+                <Button 
+                  onClick={() => playRoulette('red', 100)}
+                  disabled={isPlaying || loading}
+                  variant="outline" 
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white disabled:opacity-50"
+                >
                   Красное (x2)
                 </Button>
-                <Button variant="outline" className="border-primary hover:bg-primary hover:text-background">
+                <Button 
+                  onClick={() => playRoulette('green', 100)}
+                  disabled={isPlaying || loading}
+                  variant="outline" 
+                  className="border-primary hover:bg-primary hover:text-background disabled:opacity-50"
+                >
                   Зеро (x35)
                 </Button>
-                <Button variant="outline" className="border-zinc-500 text-zinc-300 hover:bg-zinc-500 hover:text-white">
+                <Button 
+                  onClick={() => playRoulette('black', 100)}
+                  disabled={isPlaying || loading}
+                  variant="outline" 
+                  className="border-zinc-500 text-zinc-300 hover:bg-zinc-500 hover:text-white disabled:opacity-50"
+                >
                   Чёрное (x2)
                 </Button>
               </div>
-              <Button className="w-full max-w-md mx-auto block gold-gradient text-background font-bold py-6 text-lg">
-                Крутить рулетку
-              </Button>
+              {gameResult && gameResult.result && gameResult.result.number !== undefined && (
+                <div className="text-center mb-6 animate-fade-in">
+                  <div className="text-2xl font-bold text-primary">
+                    Выпало: {gameResult.result.number} ({gameResult.result.color === 'red' ? '🔴 Красное' : gameResult.result.color === 'black' ? '⚫ Чёрное' : '🟢 Зеро'})
+                  </div>
+                </div>
+              )}
+              <div className="text-center text-muted-foreground mb-4">Ставка: 100₽</div>
             </Card>
           )}
 
@@ -261,6 +467,101 @@ export default function Index() {
           )}
         </div>
 
+        {showDeposit && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+            <Card className="bg-card border-primary/30 max-w-md w-full p-6 animate-scale-in">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-foreground">Пополнить баланс</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowDeposit(false)}>
+                  <Icon name="X" size={24} />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Сумма пополнения</label>
+                  <Input
+                    type="number"
+                    placeholder="1000"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="text-lg"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  {[1000, 5000, 10000].map(amount => (
+                    <Button 
+                      key={amount}
+                      variant="outline"
+                      onClick={() => setDepositAmount(amount.toString())}
+                    >
+                      +{amount}₽
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button 
+                  onClick={handleDeposit}
+                  disabled={loading}
+                  className="w-full gold-gradient text-background font-bold py-6 text-lg"
+                >
+                  {loading ? 'Обработка...' : 'Пополнить'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {showWithdraw && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+            <Card className="bg-card border-primary/30 max-w-md w-full p-6 animate-scale-in">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-foreground">Вывести средства</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowWithdraw(false)}>
+                  <Icon name="X" size={24} />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Сумма вывода</label>
+                  <Input
+                    type="number"
+                    placeholder="1000"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="text-lg"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Номер карты / кошелька</label>
+                  <Input
+                    type="text"
+                    placeholder="1234 5678 9012 3456"
+                    value={withdrawRecipient}
+                    onChange={(e) => setWithdrawRecipient(e.target.value)}
+                    className="text-lg"
+                  />
+                </div>
+                
+                <div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">
+                  Доступно для вывода: <span className="text-primary font-bold">{balance.toLocaleString()}₽</span>
+                </div>
+                
+                <Button 
+                  onClick={handleWithdraw}
+                  disabled={loading}
+                  className="w-full gold-gradient text-background font-bold py-6 text-lg"
+                >
+                  {loading ? 'Обработка...' : 'Вывести'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
         {showProfile && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
             <Card className="bg-card border-primary/30 max-w-md w-full p-6 animate-scale-in">
@@ -283,11 +584,19 @@ export default function Index() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button 
+                    onClick={() => { setShowProfile(false); setShowDeposit(true); }}
+                    className="w-full justify-start" 
+                    variant="outline"
+                  >
                     <Icon name="Wallet" size={20} className="mr-2" />
                     Пополнить баланс
                   </Button>
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button 
+                    onClick={() => { setShowProfile(false); setShowWithdraw(true); }}
+                    className="w-full justify-start" 
+                    variant="outline"
+                  >
                     <Icon name="ArrowDownToLine" size={20} className="mr-2" />
                     Вывести средства
                   </Button>

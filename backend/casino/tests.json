@@ -1,0 +1,45 @@
+{
+  "tests": [
+    {
+      "name": "Get balance",
+      "method": "GET",
+      "path": "/?action=balance",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "balance": "number"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Deposit money",
+      "method": "POST",
+      "path": "/?action=transfer",
+      "body": {
+        "type": "deposit",
+        "amount": 1000
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "balance": "number",
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Play slots",
+      "method": "POST",
+      "path": "/?action=play",
+      "body": {
+        "game": "slots",
+        "bet": 100
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "win": "number",
+        "balance": "number",
+        "result": "object"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
