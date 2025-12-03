@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
 
 export default function Index() {
   const [balance, setBalance] = useState(10000);
   const [showProfile, setShowProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState('games');
 
   const games = [
     { id: 1, name: 'Lucky Slots', icon: 'Cherry', minBet: 10, maxWin: 5000, hot: true },
@@ -93,28 +93,48 @@ export default function Index() {
           </div>
         </section>
 
-        <Tabs defaultValue="games" className="mb-12">
-          <TabsList className="grid w-full grid-cols-4 bg-card border border-primary/20 p-1">
-            <TabsTrigger value="games" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Icon name="Gamepad2" size={18} className="mr-2" />
-              Игры
-            </TabsTrigger>
-            <TabsTrigger value="roulette" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Icon name="CircleDot" size={18} className="mr-2" />
-              Рулетка
-            </TabsTrigger>
-            <TabsTrigger value="bonuses" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Icon name="Gift" size={18} className="mr-2" />
-              Бонусы
-            </TabsTrigger>
-            <TabsTrigger value="referral" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Icon name="Users" size={18} className="mr-2" />
-              Рефералы
-            </TabsTrigger>
-          </TabsList>
+        <div className="mb-12">
+          <div className="grid w-full grid-cols-4 bg-card border border-primary/20 p-1 rounded-lg mb-8">
+            <button
+              onClick={() => setActiveTab('games')}
+              className={`flex items-center justify-center gap-2 py-3 px-4 rounded transition-all ${
+                activeTab === 'games' ? 'bg-primary text-background' : 'hover:bg-muted'
+              }`}
+            >
+              <Icon name="Gamepad2" size={18} />
+              <span className="hidden sm:inline">Игры</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('roulette')}
+              className={`flex items-center justify-center gap-2 py-3 px-4 rounded transition-all ${
+                activeTab === 'roulette' ? 'bg-primary text-background' : 'hover:bg-muted'
+              }`}
+            >
+              <Icon name="CircleDot" size={18} />
+              <span className="hidden sm:inline">Рулетка</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('bonuses')}
+              className={`flex items-center justify-center gap-2 py-3 px-4 rounded transition-all ${
+                activeTab === 'bonuses' ? 'bg-primary text-background' : 'hover:bg-muted'
+              }`}
+            >
+              <Icon name="Gift" size={18} />
+              <span className="hidden sm:inline">Бонусы</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('referral')}
+              className={`flex items-center justify-center gap-2 py-3 px-4 rounded transition-all ${
+                activeTab === 'referral' ? 'bg-primary text-background' : 'hover:bg-muted'
+              }`}
+            >
+              <Icon name="Users" size={18} />
+              <span className="hidden sm:inline">Рефералы</span>
+            </button>
+          </div>
 
-          <TabsContent value="games" className="mt-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {activeTab === 'games' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
               {games.map((game) => (
                 <Card
                   key={game.id}
@@ -141,10 +161,10 @@ export default function Index() {
                 </Card>
               ))}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="roulette" className="mt-8">
-            <Card className="bg-card border-primary/20 p-8">
+          {activeTab === 'roulette' && (
+            <Card className="bg-card border-primary/20 p-8 animate-fade-in">
               <div className="text-center mb-8">
                 <div className="inline-flex gold-gradient w-32 h-32 rounded-full items-center justify-center mb-6 animate-pulse-glow">
                   <Icon name="CircleDot" size={64} className="text-background animate-spin" style={{ animationDuration: '3s' }} />
@@ -169,10 +189,10 @@ export default function Index() {
                 Крутить рулетку
               </Button>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="bonuses" className="mt-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {activeTab === 'bonuses' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
               {bonuses.map((bonus, index) => (
                 <Card
                   key={index}
@@ -194,10 +214,10 @@ export default function Index() {
                 </Card>
               ))}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="referral" className="mt-8">
-            <Card className="bg-card border-primary/20 p-8">
+          {activeTab === 'referral' && (
+            <Card className="bg-card border-primary/20 p-8 animate-fade-in">
               <div className="text-center mb-8">
                 <div className="inline-flex gold-gradient w-24 h-24 rounded-full items-center justify-center mb-6">
                   <Icon name="Users" size={48} className="text-background" />
@@ -224,9 +244,9 @@ export default function Index() {
               </div>
 
               <div className="bg-muted rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-sm text-foreground">https://royal-casino.com/ref/USER12345</code>
-                  <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-background">
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <code className="flex-1 text-sm text-foreground break-all">https://royal-casino.com/ref/USER12345</code>
+                  <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-background whitespace-nowrap">
                     <Icon name="Copy" size={18} className="mr-2" />
                     Копировать
                   </Button>
@@ -238,8 +258,8 @@ export default function Index() {
                 Поделиться ссылкой
               </Button>
             </Card>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
 
         {showProfile && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
